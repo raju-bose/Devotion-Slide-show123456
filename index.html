@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0612">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Divine Darshan</title>
+<!--
+  DIVINE DARSHAN — Slideshow with pictures, music and right-to-left rotation
+  -------------------------------------------------------------------------
+  • Open this file in Chrome or Edge. Click once anywhere: full screen + music start.
+  • Pictures: loaded automatically from the internet (the main picture of each
+    deity's Wikipedia article, then public-domain paintings on Wikimedia Commons).
+    IMPORTANT: save this file and open it by double-clicking in Chrome/Edge with
+    internet ON. App/email/WhatsApp previews block internet pictures.
+    After pictures load, click 💾 Save single file to keep them for offline use.
+  • Your own pictures: put them in an "images" folder next to this file
+    (images/shiva.jpg, images/hanuman.png …) or click 🖼 My Photos. Your own
+    pictures always win over the online ones.
+  • Music: a soft tanpura drone + bansuri (flute) melody in Raag Bhupali with a
+    temple bell on each slide — made live by the browser, no download needed.
+    To play your own bhajan/aarti MP3 instead, click 🎧 My Music.
+  • PROJECTOR / WALL: connect the projector with HDMI, press Windows+P and choose
+    "Duplicate" (or "Extend"), then click 📽 Projector — the slides go full screen on
+    the projector. Use ⚙ Wall to fit the picture to the wall (size, keystone,
+    brightness, ceiling-mount flip, rear-projection mirror). Settings are remembered.
+  • 📷 Wall Camera: uses the BACK camera of a phone/tablet. Point it at the front wall —
+    the screen shows the live wall with the god's picture glowing on it (your face is
+    never shown). This is on the screen only; a camera cannot throw light on a real wall.
+  • 📺 TV: shows the steps to send the slideshow to a smart TV without cables
+    (Windows + K, or Chrome menu → Cast).
+  • Keys: ← → change slide, Space pause, P projector, F full screen, W wall settings,
+    M mirror, S music, C wall camera, T TV.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Tiro+Devanagari+Sanskrit&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#ffd76a;
+    --gold-soft:#fff1c1;
+    --ui-bg:rgba(15,8,25,.72);
+    --ui-border:rgba(255,215,106,.35);
+    --dur:1.4s;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#000;overflow:hidden;color:#fff;
+    font-family:"Segoe UI",Roboto,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  body.hide-cursor{cursor:none}
+
+  /* ---------- Stage & slides ---------- */
+  #stage{position:fixed;inset:0;perspective:1700px;overflow:hidden;background:#000}
+  #wallbox{position:fixed;inset:0;overflow:hidden;background:#000}
+  #camVideo{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;display:none;background:#000}
+  body.ar #camVideo{display:block}
+  body.ar #wallbox,body.ar #stage{background:transparent}
+  body.ar #wallbox{z-index:1}
+  body.ar .slide{background:transparent !important}
+  body.ar .photo::before{inset:-12%;background:radial-gradient(circle,rgba(255,225,140,.75),rgba(255,170,50,.3) 45%,transparent 70%);
+    filter:blur(6px)}
+  body.ar .photo img{box-shadow:0 0 4vh 1vh rgba(255,210,110,.85),0 0 14vh 4vh rgba(255,160,40,.45);
+    -webkit-mask-image:radial-gradient(ellipse 72% 78% at 50% 50%,#000 62%,transparent 100%);
+            mask-image:radial-gradient(ellipse 72% 78% at 50% 50%,#000 62%,transparent 100%)}
+  body.ar .visual svg{filter:drop-shadow(0 0 4vh rgba(255,200,90,.9))}
+  body.ar .text{background:rgba(0,0,0,.35);border-radius:1.5vh;padding:1vh 2.5vw}
+  #camVideo.ar-dim{filter:brightness(.8) contrast(1.05)}
+  #tvHelp{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;padding:16px}
+  #tvHelp.open{display:flex}
+  #tvHelp .box{background:#160c22;border:1px solid var(--ui-border);border-radius:16px;max-width:560px;width:100%;
+    padding:20px 22px;font-size:15px;line-height:1.55;max-height:92vh;overflow:auto}
+  #tvHelp h3{font-family:Cinzel,Georgia,serif;color:var(--gold-soft);margin-bottom:10px}
+  #tvHelp h4{color:var(--gold);margin:12px 0 4px;font-size:15px}
+  #tvHelp ol{padding-left:20px}
+  #tvHelp .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  #tvHelp .btns button{flex:1;min-width:150px;padding:10px;border-radius:10px;border:1px solid var(--gold);
+    background:rgba(255,215,106,.2);color:#fff;font-size:15px;cursor:pointer}
+  #stage{transform-origin:50% 50%;transition:transform .3s,filter .3s}
+  .slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2vh;padding:3vh 4vw 9vh;opacity:0;backface-visibility:hidden;transform-style:preserve-3d;
+    transition:transform var(--dur) cubic-bezier(.65,.05,.3,1),opacity var(--dur) ease}
+  .slide.active{opacity:1;transform:none;z-index:2}
+  /* Right → Left rotation: new slide swings in from the right, old one swings out to the left */
+  .slide.from-right{transform:translateX(60%) rotateY(-80deg) scale(.85)}
+  .slide.from-left {transform:translateX(-60%) rotateY(80deg) scale(.85)}
+  .slide.to-left   {opacity:0;transform:translateX(-60%) rotateY(80deg) scale(.85);z-index:1}
+  .slide.to-right  {opacity:0;transform:translateX(60%) rotateY(-80deg) scale(.85);z-index:1}
+
+  .visual{height:60vh;aspect-ratio:1/1;max-width:92vw;display:flex;align-items:center;justify-content:center;position:relative}
+  .visual.wide{height:66vh;aspect-ratio:16/9;max-width:94vw}
+  .visual.pic{height:64vh;aspect-ratio:4/5}
+  .visual svg{width:100%;height:100%;filter:drop-shadow(0 0 3vh rgba(255,200,90,.45))}
+  .photo{width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative}
+  .photo::before{content:"";position:absolute;inset:4%;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,220,130,.55),rgba(255,160,40,.12) 55%,transparent 70%);
+    animation:pulse 6s ease-in-out infinite}
+  .photo img{position:relative;max-width:100%;max-height:100%;object-fit:contain;border-radius:1.2vh;
+    box-shadow:0 0 0 .35vh rgba(255,215,106,.8),0 0 6vh rgba(255,190,80,.55);
+    animation:breathe 14s ease-in-out infinite}
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+  @keyframes pulse{0%,100%{transform:scale(.96);opacity:.8}50%{transform:scale(1.04);opacity:1}}
+
+  .text{text-align:center;max-width:92vw}
+  .name{font-family:Cinzel,Georgia,serif;font-weight:700;font-size:clamp(20px,4.4vh,54px);letter-spacing:.08em;
+    color:var(--gold-soft);text-shadow:0 0 2vh rgba(255,200,90,.6)}
+  .name .hi{font-family:"Tiro Devanagari Sanskrit","Nirmala UI",Mangal,serif;letter-spacing:0;font-weight:400;
+    color:var(--gold);margin-left:.4em}
+  .mantra{margin-top:1.2vh;font-family:"Tiro Devanagari Sanskrit","Nirmala UI",Mangal,serif;
+    font-size:clamp(22px,5.2vh,64px);line-height:1.35;color:#fff;
+    text-shadow:0 0 1vh rgba(255,170,60,.9),0 0 3vh rgba(255,120,30,.6)}
+  .mantra.long{font-size:clamp(18px,3.6vh,44px)}
+  .tr{margin-top:.8vh;font-size:clamp(13px,2.4vh,28px);font-style:italic;color:rgba(255,235,190,.85);letter-spacing:.03em}
+
+  /* SVG animation */
+  .spin{transform-box:view-box;transform-origin:200px 190px;animation:spin 90s linear infinite}
+  .spin-rev{transform-box:view-box;transform-origin:200px 190px;animation:spin 140s linear infinite reverse}
+  .glow{transform-box:view-box;transform-origin:200px 190px;animation:pulse 5s ease-in-out infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- Progress & dots ---------- */
+  #progress{position:fixed;left:0;bottom:0;height:4px;width:0;background:linear-gradient(90deg,#ff9d2e,var(--gold));z-index:20}
+  #dots{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:6px;z-index:20;
+    transition:opacity .4s}
+  #dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.28)}
+  #dots i.on{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+
+  /* ---------- Controls ---------- */
+  #controls{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:30;display:flex;flex-wrap:wrap;
+    justify-content:center;align-items:center;gap:8px;padding:10px 14px;max-width:96vw;background:var(--ui-bg);
+    border:1px solid var(--ui-border);border-radius:14px;backdrop-filter:blur(8px);transition:opacity .4s,transform .4s}
+  body.idle #controls,body.idle #dots{opacity:0;pointer-events:none}
+  body.idle #controls{transform:translate(-50%,20px)}
+  #controls button,#controls select,#controls label.btn{font:inherit;font-size:14px;color:#fff;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.18);border-radius:9px;padding:8px 12px;cursor:pointer;min-height:38px;
+    display:inline-flex;align-items:center;gap:6px}
+  #controls button:hover,#controls label.btn:hover{background:rgba(255,215,106,.18);border-color:var(--gold)}
+  #controls button.on{background:rgba(255,215,106,.28);border-color:var(--gold);color:var(--gold-soft)}
+  #controls select option{background:#1a0f26}
+  #vol{width:90px;accent-color:var(--gold)}
+  #file,#music{display:none}
+  #toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:40;background:var(--ui-bg);
+    border:1px solid var(--ui-border);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .4s;
+    pointer-events:none;max-width:90vw;text-align:center}
+  #toast.show{opacity:1}
+  body.wall-big .visual.pic{height:74vh}
+  body.wall-big .visual{height:68vh}
+  body.wall-big .tr{display:none}
+  body.wall-picture .text{display:none}
+  body.wall-picture .visual.pic{height:90vh;aspect-ratio:auto;width:auto;max-width:96vw}
+  body.wall-picture .visual{height:86vh}
+  body.wall-picture .slide{padding:3vh 2vw}
+  #wallPanel{position:fixed;right:16px;top:16px;z-index:45;width:300px;max-width:calc(100vw - 32px);
+    max-height:calc(100vh - 32px);overflow:auto;background:rgba(15,8,25,.94);border:1px solid var(--ui-border);
+    border-radius:14px;padding:14px 16px;font-size:14px;display:none;box-shadow:0 8px 30px #000}
+  #wallPanel.open{display:block}
+  #wallPanel h3{font-family:Cinzel,Georgia,serif;color:var(--gold-soft);font-size:16px;margin-bottom:10px;display:flex;justify-content:space-between}
+  #wallPanel h3 button{background:none;border:0;color:#fff;font-size:18px;cursor:pointer}
+  #wallPanel label{display:block;margin:10px 0 4px;color:rgba(255,235,190,.9)}
+  #wallPanel input[type=range]{width:100%;accent-color:var(--gold)}
+  #wallPanel select{width:100%;padding:6px;border-radius:8px;background:#1a0f26;color:#fff;border:1px solid rgba(255,255,255,.2)}
+  #wallPanel .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  #wallPanel .row button{flex:1;min-width:120px;padding:8px;border-radius:8px;background:rgba(255,255,255,.08);
+    color:#fff;border:1px solid rgba(255,255,255,.2);cursor:pointer}
+  #wallPanel .row button.on{background:rgba(255,215,106,.28);border-color:var(--gold)}
+  #wallPanel .hint{margin-top:10px;font-size:12.5px;color:rgba(255,255,255,.7);line-height:1.45}
+  body.idle #wallPanel.open{opacity:.97}
+
+  #controls{width:max-content}
+  @media (max-width:700px){
+    #controls{width:calc(100vw - 16px);max-width:none;gap:6px;padding:8px;bottom:28px}
+    #controls button,#controls select,#controls label.btn{font-size:13px;padding:6px 9px;min-height:34px}
+    #vol{width:70px}
+  }
+  @media (orientation:portrait){
+    .visual{height:auto;width:88vw}
+    .visual.wide{height:auto;width:94vw}
+    .visual.pic{height:auto;width:84vw}
+    .slide{padding-bottom:16vh}
+  }
+</style>
+</head>
+<body>
+<video id="camVideo" autoplay muted playsinline></video>
+<div id="wallbox"><div id="stage"></div></div>
+<div id="progress"></div>
+<div id="dots"></div>
+
+<div id="controls">
+  <button id="bPrev" title="Previous (←)">⏮</button>
+  <button id="bPlay" title="Play / Pause (Space)">⏸ Pause</button>
+  <button id="bNext" title="Next (→)">⏭</button>
+  <select id="sTime" title="Time per slide">
+    <option value="6">6 sec</option>
+    <option value="10" selected>10 sec</option>
+    <option value="15">15 sec</option>
+    <option value="20">20 sec</option>
+    <option value="30">30 sec</option>
+    <option value="60">1 min</option>
+  </select>
+  <select id="sFx" title="Rotation effect">
+    <option value="rtl" selected>Rotate Right → Left</option>
+    <option value="ltr">Rotate Left → Right</option>
+    <option value="swing">Swing Left ↔ Right</option>
+  </select>
+  <button id="bMusic" class="on" title="Music on / off (S)">🎵 Music</button>
+  <input id="vol" type="range" min="0" max="100" value="70" title="Music volume">
+  <label class="btn" for="music" title="Play your own bhajan / aarti MP3 files">🎧 My Music</label>
+  <input type="file" id="music" accept="audio/*" multiple>
+  <button id="bProj" title="Show the slides full screen on the projector / wall (P)">📽 Projector</button>
+  <button id="bCam" title="Live wall view with the back camera of a phone (C)">📷 Wall Camera</button>
+  <button id="bTV" title="Show on a smart TV without cables (T)">📺 TV</button>
+  <button id="bWall" title="Fit the picture to the wall: size, keystone, brightness, flip (W)">⚙ Wall</button>
+  <button id="bChant" title="Speak the mantra aloud">🔔 Chant</button>
+  <button id="bMirror" title="Flip image for rear projection (M)">⇋ Mirror</button>
+  <label class="btn" for="file" title="Pick your own pictures (name them shiva.jpg, hanuman.jpg …)">🖼 My Photos</label>
+  <button id="bSave" title="Save ONE html file with all pictures inside (works offline)">💾 Save single file</button>
+  <input type="file" id="file" accept="image/*" multiple>
+  <button id="bFull" title="Full screen (F)">⛶ Full screen</button>
+</div>
+<div id="toast"></div>
+<div id="tvHelp">
+  <div class="box">
+    <h3>📺 Show the slideshow on a TV (no projector, no cable)</h3>
+    <h4>From a Windows laptop to a smart TV (Miracast)</h4>
+    <ol>
+      <li>Turn on the TV and choose its <b>Screen Mirroring / Screen Share</b> input.</li>
+      <li>On the laptop press <b>Windows + K</b> and pick the TV name.</li>
+      <li>Come back here and click <b>Start full screen</b> below.</li>
+    </ol>
+    <h4>With Chromecast / Android TV / Google TV</h4>
+    <ol>
+      <li>Laptop and TV must be on the <b>same Wi‑Fi</b>.</li>
+      <li>In Chrome click the <b>⋮ menu → Cast… → Sources → Cast tab</b>, then pick the TV.</li>
+      <li>Click <b>Start full screen</b> below. Music plays through the TV.</li>
+    </ol>
+    <h4>From an Android phone</h4>
+    <ol>
+      <li>Open this slideshow on the phone.</li>
+      <li>Swipe down → <b>Smart View / Screen Cast / Cast</b> → choose the TV.</li>
+      <li>Turn the phone sideways and click <b>Start full screen</b>.</li>
+    </ol>
+    <div class="btns">
+      <button id="tvGo">▶ Start full screen</button>
+      <button id="tvClose">Close</button>
+    </div>
+  </div>
+</div>
+<div id="wallPanel">
+  <h3>Wall / Projector setup <button id="wClose" title="Close">✕</button></h3>
+  <label>What to show on the wall</label>
+  <select id="wLayout">
+    <option value="normal">Picture + name + mantra</option>
+    <option value="big" selected>Big picture + name + mantra</option>
+    <option value="picture">Only the picture (full wall)</option>
+  </select>
+  <label>Size on wall: <b id="wZoomV">100%</b></label>
+  <input id="wZoom" type="range" min="50" max="150" value="100">
+  <label>Keystone (fix top/bottom width): <b id="wKeyV">0</b></label>
+  <input id="wKey" type="range" min="-25" max="25" value="0">
+  <label>Move up / down: <b id="wYV">0</b></label>
+  <input id="wY" type="range" min="-30" max="30" value="0">
+  <label>Brightness: <b id="wBriV">100%</b></label>
+  <input id="wBri" type="range" min="60" max="160" value="110">
+  <div class="row">
+    <button id="wMirror" title="Projector behind a screen (rear projection)">⇋ Mirror</button>
+    <button id="wFlip" title="Projector hung upside down from the ceiling">↻ Ceiling flip</button>
+  </div>
+  <div class="row"><button id="wReset">Reset</button></div>
+  <div class="hint">1) Connect the projector (HDMI). 2) Press <b>Windows + P</b> → <b>Duplicate</b>.
+  3) Click <b>📽 Projector</b>. Point the projector at the front wall; use Keystone if the picture
+  is wider at the top or bottom. Settings are remembered on this laptop.</div>
+</div>
+<audio id="aud" preload="auto"></audio>
+
+<script>
+/* =========================================================
+   DEITY LIST — add more by copying one line.
+   icon: trishul | chakra | lotus | sun | gada | flute | vina |
+         sword | vel | bow | eclipse | comet | crescent | text
+   ========================================================= */
+const DEITIES = [
+ {key:['shiva','mahadev','bholenath','shankar'], name:'Lord Shiva', hi:'भगवान शिव',
+  mantra:'ॐ नमः शिवाय', tr:'Om Namah Shivaya', c1:'#2f6fd0', c2:'#081a3a', icon:'trishul'},
+ {key:['hanuman','bajrang','maruti'], name:'Jai Hanuman', hi:'जय हनुमान',
+  mantra:'ॐ हं हनुमते नमः', tr:'Om Ham Hanumate Namah', c1:'#e8641b', c2:'#3a0e02', icon:'gada'},
+ {key:['lakshmi','laxmi','mahalaxmi','mahalakshmi'], name:'Maa Mahalaxmi', hi:'माँ महालक्ष्मी',
+  mantra:'ॐ श्रीं ह्रीं श्रीं कमले कमलालये प्रसीद प्रसीद श्रीं ह्रीं श्रीं ॐ महालक्ष्म्यै नमः',
+  tr:'Om Shreem Hreem Shreem Kamale Kamalalaye Praseed Praseed Shreem Hreem Shreem Om Mahalakshmyai Namah',
+  c1:'#d9366f', c2:'#3a0616', icon:'lotus'},
+ {key:['narasimha','narasingha','narsingh','nrisimha','narsimha'], name:'Lord Narasimha', hi:'भगवान नृसिंह',
+  mantra:'ॐ उग्रं वीरं महाविष्णुं ज्वलन्तं सर्वतोमुखम्। नृसिंहं भीषणं भद्रं मृत्युमृत्युं नमाम्यहम्॥',
+  tr:'Om Ugram Veeram Mahavishnum Jvalantam Sarvatomukham, Nrisimham Bhishanam Bhadram Mrityumrityum Namamyaham',
+  c1:'#e0461b', c2:'#2a0500', icon:'text', glyph:'क्ष्रौं'},
+ {key:['durga','ambe','bhavani'], name:'Maa Durga', hi:'माँ दुर्गा',
+  mantra:'ॐ दुं दुर्गायै नमः', tr:'Om Dum Durgayai Namah', c1:'#d11f2a', c2:'#300408', icon:'text', glyph:'दुं'},
+ {key:['kali','kalika'], name:'Maa Kali', hi:'माँ काली',
+  mantra:'ॐ क्रीं कालिकायै नमः', tr:'Om Kreem Kalikayai Namah', c1:'#3b2a86', c2:'#07031a', icon:'sword'},
+ {key:['saraswati','sraswati','sarswati','sarasvati'], name:'Maa Saraswati', hi:'माँ सरस्वती',
+  mantra:'ॐ ऐं सरस्वत्यै नमः', tr:'Om Aim Saraswatyai Namah', c1:'#e9e4c8', c2:'#23324a', icon:'vina'},
+ {key:['ganesh','ganesha','ganeha','ganpati','ganapati','vinayak'], name:'Lord Ganesha', hi:'भगवान गणेश',
+  mantra:'ॐ गं गणपतये नमः', tr:'Om Gam Ganapataye Namah', c1:'#f28a1c', c2:'#3d1600', icon:'text', glyph:'गं'},
+ {key:['kartik','kartikeya','murugan','skanda','subramanya'], name:'Lord Kartikeya', hi:'भगवान कार्तिकेय',
+  mantra:'ॐ शरवणभवाय नमः', tr:'Om Sharavanabhavaya Namah', c1:'#c2185b', c2:'#2b0414', icon:'vel'},
+ {key:['surya','suryadev','sun'], name:'Lord Surya', hi:'भगवान सूर्य',
+  mantra:'ॐ ह्रां ह्रीं ह्रौं सः सूर्याय नमः', tr:'Om Hraam Hreem Hraum Sah Suryaya Namah', c1:'#ffb300', c2:'#4a1a00', icon:'sun'},
+ {key:['rahu'], name:'Lord Rahu', hi:'राहु देव',
+  mantra:'ॐ भ्रां भ्रीं भ्रौं सः राहवे नमः', tr:'Om Bhraam Bhreem Bhraum Sah Rahave Namah', c1:'#37474f', c2:'#05080a', icon:'eclipse'},
+ {key:['ketu'], name:'Lord Ketu', hi:'केतु देव',
+  mantra:'ॐ स्रां स्रीं स्रौं सः केतवे नमः', tr:'Om Sraam Sreem Sraum Sah Ketave Namah', c1:'#6d4c41', c2:'#0d0604', icon:'comet'},
+ {key:['krishna','krishan','kanha','gopal'], name:'Lord Krishna', hi:'भगवान श्रीकृष्ण',
+  mantra:'ॐ नमो भगवते वासुदेवाय', tr:'Om Namo Bhagavate Vasudevaya', c1:'#1e62c9', c2:'#04143a', icon:'flute'},
+ {key:['vishnu','narayan','narayana'], name:'Lord Vishnu', hi:'भगवान विष्णु',
+  mantra:'ॐ नमो नारायणाय', tr:'Om Namo Narayanaya', c1:'#1976d2', c2:'#03152e', icon:'chakra'},
+ {key:['rama','ram','shriram','raghav'], name:'Lord Rama', hi:'भगवान श्रीराम',
+  mantra:'श्री राम जय राम जय जय राम', tr:'Shri Ram Jai Ram Jai Jai Ram', c1:'#2e7d32', c2:'#031a06', icon:'bow'},
+ {key:['jagannath','jagganath','jagannatha'], name:'Lord Jagannath', hi:'भगवान जगन्नाथ',
+  mantra:'ॐ श्री जगन्नाथाय नमः', tr:'Om Shri Jagannathaya Namah', c1:'#b71c1c', c2:'#1a0303', icon:'chakra'},
+ {key:['shani','shanidev'], name:'Lord Shani', hi:'शनि देव',
+  mantra:'ॐ प्रां प्रीं प्रौं सः शनैश्चराय नमः', tr:'Om Praam Preem Praum Sah Shanaischaraya Namah', c1:'#283593', c2:'#02041a', icon:'text', glyph:'शं'},
+ {key:['chandra','moon','som'], name:'Lord Chandra', hi:'चन्द्र देव',
+  mantra:'ॐ श्रां श्रीं श्रौं सः चन्द्रमसे नमः', tr:'Om Shraam Shreem Shraum Sah Chandramase Namah', c1:'#90a4ae', c2:'#0b1320', icon:'crescent'},
+ {key:['gayatri'], name:'Maa Gayatri', hi:'माँ गायत्री',
+  mantra:'ॐ भूर्भुवः स्वः तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि धियो यो नः प्रचोदयात्॥',
+  tr:'Om Bhur Bhuvah Svah, Tat Savitur Varenyam, Bhargo Devasya Dhimahi, Dhiyo Yo Nah Prachodayat',
+  c1:'#ff8f00', c2:'#2e1200', icon:'text', glyph:'ॐ'},
+];
+
+/* Online pictures (public-domain, Wikimedia Commons).
+   Step 1: these exact files are tried in order.
+   Step 2: if none load, the page SEARCHES Wikimedia Commons with the text in IMAGE_SEARCH. */
+const WEB_IMAGES = {
+ shiva: ["An_Oleograph_of_Shiva,_Parvati_and_Nandi_by_Raja_Ravi_Varma.jpg", "Shiva_meditating_Rishikesh.jpg"],
+ hanuman: ["Hanuman_painting_c1920.jpg", "Hanuman_fetches_the_herb-bearing_mountain,_in_a_print_from_the_Ravi_Varma_Press,_1910's.jpg", "Hanuman.jpg"],
+ lakshmi: ["Raja_Ravi_Varma,_Goddess_Lakshmi,_1896.jpg", "Lakshmi_by_Raja_Ravi_Varma.jpg", "Ravi_Varma-Lakshmi.jpg"],
+ narasimha: ["Vishnu's_half-man_half-tiger_avatar,_Narasimha,_in_a_bazaar_art_print_by_the_Ravi_Varma.jpg", "Narasimha_by_Raja_Ravi_Varma.jpg", "Narasimha_oil_colour.jpg"],
+ durga: ["Durga_by_Raja_Ravi_Varma.jpg", "Goddess_Durga_by_Raja_Ravi_Varma.jpg"],
+ kali: ["Kali_by_Raja_Ravi_Varma.jpg"],
+ saraswati: ["Raja_Ravi_Varma,_Goddess_Saraswati.jpg", "Goddess_Saraswati_by_Raja_Ravi_Varma,_1896.jpg", "Saraswati.jpg"],
+ ganesh: ["Ganapati1.jpg", "AshtaSiddhi.jpg"],
+ kartik: ["Murugan_by_Raja_Ravi_Varma.jpg"],
+ surya: ["Surya_poster.jpg", "God_Surya.png", "The_sun_Chariot.jpg"],
+ rahu: ["Rahu_graha.JPG"],
+ ketu: ["Ketu_graha.JPG"],
+ krishna: ["Raja_Ravi_Varma,_Sri_Krishna_as_Envoy.jpg", "Krishna_as_Envoy,_by_Raja_Ravi_Varma.jpg"],
+ vishnu: ["Vishnu_and_Lakshmi_on_Shesha_Naga,_ca_1870.jpg", "Vishnu_and_Lakshmi_on_Shesha.jpg"],
+ rama: ["Ramapanchayan,_Raja_Ravi_Varma_(Lithograph).jpg", "Ravi_Varma-Rama-breaking-bow.jpg"],
+ jagannath: ["Balabhadra_Subhadra_Jagannath.jpg", "Chore_Bagan_Art_Studio_Jagannath.jpg"],
+ shani: ["Shani_Deva.jpg", "Shani_Dev.jpg", "Shani_graha.JPG"],
+ chandra: ["Chandra_the_Moon,_by_Ravi_Varma_Press.jpg", "Mandala_of_Chandra,_God_of_the_Moon.jpg"],
+ gayatri: ["The_\"Gayatri_mantra\"_has_been_personified_into_a_goddess.jpg", "Gayatri1.jpg"]
+};
+const IMAGE_SEARCH = {
+ shiva:'Shiva Raja Ravi Varma', hanuman:'Hanuman painting', lakshmi:'Lakshmi Raja Ravi Varma',
+ narasimha:'Narasimha painting', durga:'Durga painting', kali:'Kali goddess painting',
+ saraswati:'Saraswati Raja Ravi Varma', ganesh:'Ganesha painting', kartik:'Kartikeya painting',
+ surya:'Surya deity painting', rahu:'Rahu graha', ketu:'Ketu graha', krishna:'Krishna Raja Ravi Varma',
+ vishnu:'Vishnu painting', rama:'Rama Raja Ravi Varma', jagannath:'Jagannath Balabhadra Subhadra',
+ shani:'Shani deva', chandra:'Chandra deity', gayatri:'Gayatri goddess'
+};
+
+/* ---------- SVG artwork (shown only if no picture can be loaded) ---------- */
+const G = 'url(#gold)';
+function ring(n, r, f){ let s=''; for(let i=0;i<n;i++){ const a=i*360/n; s+=f(a,r,i);} return s; }
+const ICONS = {
+  trishul:()=>`
+    <g fill="none" stroke="${G}" stroke-width="9" stroke-linecap="round">
+      <line x1="200" y1="112" x2="200" y2="300"/>
+      <path d="M148 118 Q148 176 200 182 Q252 176 252 118"/>
+    </g>
+    <path d="M200 88 L213 128 L200 121 L187 128Z M148 100 L158 128 L148 122 L138 128Z M252 100 L262 128 L252 122 L242 128Z" fill="${G}"/>
+    <path d="M182 208 L218 208 L200 228 Z M182 248 L218 248 L200 228 Z" fill="${G}"/>
+    <path d="M178 238 Q160 230 166 218" stroke="${G}" stroke-width="3" fill="none"/>`,
+  chakra:()=>`
+    <g class="spin-rev">
+      <circle cx="200" cy="190" r="70" fill="none" stroke="${G}" stroke-width="10"/>
+      <circle cx="200" cy="190" r="16" fill="${G}"/>
+      ${ring(12,0,a=>`<line x1="200" y1="190" x2="200" y2="128" stroke="${G}" stroke-width="5" transform="rotate(${a} 200 190)"/>`)}
+      ${ring(24,0,a=>`<path d="M193 116 L200 96 L207 116Z" fill="${G}" transform="rotate(${a} 200 190)"/>`)}
+    </g>`,
+  lotus:()=>`
+    ${ring(8,0,a=>`<ellipse cx="200" cy="140" rx="22" ry="52" fill="url(#pink)" stroke="#ffe3ef" stroke-width="2" transform="rotate(${a} 200 190)"/>`)}
+    ${ring(8,0,a=>`<ellipse cx="200" cy="158" rx="14" ry="34" fill="#ffc1d9" opacity=".9" transform="rotate(${a+22.5} 200 190)"/>`)}
+    <circle cx="200" cy="190" r="20" fill="${G}"/>`,
+  sun:()=>`
+    <g class="spin">${ring(16,0,(a,r,i)=>`<path d="M190 128 L200 ${i%2?96:80} L210 128Z" fill="${G}" transform="rotate(${a} 200 190)"/>`)}</g>
+    <circle cx="200" cy="190" r="56" fill="${G}"/>
+    <circle cx="200" cy="190" r="56" fill="none" stroke="#fff6c8" stroke-width="3"/>`,
+  gada:()=>`
+    <line x1="160" y1="300" x2="222" y2="170" stroke="${G}" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="232" cy="142" r="40" fill="${G}"/>
+    <path d="M196 134 Q232 118 268 150 M200 158 Q236 140 264 170" stroke="#a9670f" stroke-width="4" fill="none"/>
+    <circle cx="246" cy="98" r="8" fill="${G}"/>
+    <rect x="166" y="262" width="22" height="10" fill="#a9670f" transform="rotate(25 177 267)"/>`,
+  flute:()=>`
+    <line x1="112" y1="268" x2="292" y2="130" stroke="${G}" stroke-width="16" stroke-linecap="round"/>
+    ${[0,1,2,3,4,5].map(i=>`<circle cx="${160+i*18}" cy="${231-i*13.8}" r="3.6" fill="#6b3d06"/>`).join('')}
+    <path d="M290 60 Q330 95 296 138 Q262 95 290 60Z" fill="#1c8f7a"/>
+    <ellipse cx="293" cy="100" rx="13" ry="17" fill="#1d4fa3"/>
+    <ellipse cx="293" cy="102" rx="6" ry="8" fill="#0b1b3f"/>
+    <line x1="293" y1="138" x2="286" y2="168" stroke="#1c8f7a" stroke-width="3"/>`,
+  vina:()=>`
+    <line x1="125" y1="285" x2="285" y2="100" stroke="${G}" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="138" cy="268" r="40" fill="${G}"/>
+    <circle cx="272" cy="118" r="26" fill="${G}"/>
+    ${[-4,0,4].map(o=>`<line x1="${150+o}" y1="${258+o}" x2="${280+o}" y2="${108+o}" stroke="#fff6c8" stroke-width="1"/>`).join('')}
+    <path d="M285 100 Q300 80 318 86" stroke="${G}" stroke-width="6" fill="none" stroke-linecap="round"/>`,
+  sword:()=>`
+    <path d="M191 250 Q170 170 206 88 Q232 172 211 250Z" fill="${G}"/>
+    <line x1="200" y1="110" x2="200" y2="240" stroke="#a9670f" stroke-width="2"/>
+    <rect x="164" y="248" width="72" height="10" rx="5" fill="${G}"/>
+    <rect x="193" y="258" width="14" height="40" rx="4" fill="#a9670f"/>
+    <circle cx="200" cy="304" r="9" fill="${G}"/>`,
+  vel:()=>`
+    <line x1="200" y1="150" x2="200" y2="305" stroke="${G}" stroke-width="9" stroke-linecap="round"/>
+    <path d="M200 62 Q246 118 200 172 Q154 118 200 62Z" fill="${G}"/>
+    <path d="M200 90 Q222 118 200 150 Q178 118 200 90Z" fill="#c2185b" opacity=".7"/>`,
+  bow:()=>`
+    <path d="M160 92 Q274 190 160 288" fill="none" stroke="${G}" stroke-width="10" stroke-linecap="round"/>
+    <line x1="160" y1="92" x2="160" y2="288" stroke="#fff6c8" stroke-width="2"/>
+    <line x1="130" y1="190" x2="290" y2="190" stroke="${G}" stroke-width="5"/>
+    <path d="M300 190 L278 178 L282 190 L278 202Z" fill="${G}"/>
+    <path d="M130 190 L118 180 M130 190 L118 200 M140 190 L128 180 M140 190 L128 200" stroke="${G}" stroke-width="3"/>`,
+  eclipse:()=>`
+    <g class="spin">${ring(24,0,a=>`<path d="M195 120 L200 90 L205 120Z" fill="${G}" transform="rotate(${a} 200 190)"/>`)}</g>
+    <circle cx="200" cy="190" r="66" fill="${G}"/>
+    <circle cx="218" cy="178" r="62" fill="#0b0d10"/>`,
+  comet:()=>`
+    <path d="M240 150 L110 290 L150 270 L120 300 L250 170Z" fill="url(#tail)"/>
+    <circle cx="246" cy="146" r="36" fill="${G}"/>
+    <circle cx="246" cy="146" r="46" fill="none" stroke="#fff3c4" stroke-width="2" opacity=".6"/>`,
+  crescent:()=>`
+    <path d="M232 104 A90 90 0 1 0 232 276 A70 70 0 1 1 232 104Z" fill="${G}"/>
+    <circle cx="258" cy="140" r="4" fill="#fff"/><circle cx="276" cy="200" r="3" fill="#fff"/>`,
+  text:d=>`<text x="200" y="${(d.glyph||'ॐ').length>2?222:232}" text-anchor="middle"
+     font-family="'Tiro Devanagari Sanskrit','Nirmala UI',Mangal,serif"
+     font-size="${(d.glyph||'ॐ').length>2?92:140}" fill="${G}" stroke="#fff6c8" stroke-width="1.5">${d.glyph||'ॐ'}</text>`
+};
+
+function artSVG(d){
+  return `<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${d.name}">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff6c8"/><stop offset=".5" stop-color="#ffcf4a"/><stop offset="1" stop-color="#c8871a"/>
+    </linearGradient>
+    <radialGradient id="halo"><stop offset="0" stop-color="#fff3c4" stop-opacity=".95"/>
+      <stop offset=".45" stop-color="${d.c1}" stop-opacity=".9"/><stop offset="1" stop-color="${d.c1}" stop-opacity="0"/></radialGradient>
+    <linearGradient id="pink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe3ef"/><stop offset="1" stop-color="#e2437a"/></linearGradient>
+    <linearGradient id="tail" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffcf4a"/><stop offset="1" stop-color="#ffcf4a" stop-opacity="0"/></linearGradient>
+  </defs>
+  <circle class="glow" cx="200" cy="190" r="175" fill="url(#halo)"/>
+  <g class="spin" opacity=".55">${ring(48,0,(a,r,i)=>`<line x1="200" y1="${i%2?40:24}" x2="200" y2="62" stroke="#ffe9a8" stroke-width="${i%2?1.2:2.2}" transform="rotate(${a} 200 190)"/>`)}</g>
+  <g class="spin-rev">
+    <circle cx="200" cy="190" r="152" fill="none" stroke="${G}" stroke-width="2.5"/>
+    <circle cx="200" cy="190" r="162" fill="none" stroke="${G}" stroke-width="1" stroke-dasharray="4 7"/>
+    ${ring(24,0,a=>`<circle cx="200" cy="38" r="4" fill="${G}" transform="rotate(${a} 200 190)"/>`)}
+  </g>
+  <circle cx="200" cy="190" r="112" fill="rgba(0,0,0,.25)" stroke="${G}" stroke-width="1.5"/>
+  ${ICONS[d.icon] ? ICONS[d.icon](d) : ICONS.text(d)}
+  <g transform="translate(0,6)">
+    ${[-60,-40,-20,0,20,40,60].map(a=>`<ellipse cx="200" cy="336" rx="11" ry="28" fill="url(#gold)" opacity=".9" transform="rotate(${a} 200 360)"/>`).join('')}
+    <rect x="150" y="358" width="100" height="8" rx="4" fill="url(#gold)"/>
+  </g>
+</svg>`;
+}
+
+/* ---------- Slideshow engine ---------- */
+let slides = DEITIES.map(d=>({...d}));
+/* Pictures packed inside this file by "Save single file" */
+const EMB = window.EMBEDDED_IMAGES || {};
+slides.forEach(d => { if (d.key && EMB[d.key[0]]) d.img = EMB[d.key[0]]; });
+(EMB._extra || []).forEach(x => slides.push({name:x.name, img:x.img, c1:'#8e24aa', c2:'#14041e'}));
+let idx = 0, playing = true, timer = null, swingDir = 1, chant = false;
+const stage = document.getElementById('stage');
+const A = document.createElement('div'), B = document.createElement('div');
+A.className = B.className = 'slide'; stage.append(A,B);
+let cur = A, spare = B;
+const $ = id => document.getElementById(id);
+
+let toastT;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),4500); }
+
+/* =========================================================
+   MUSIC — tanpura drone + bansuri melody (Raag Bhupali) + temple bell,
+   generated live in the browser. Or play your own MP3s via 🎧 My Music.
+   ========================================================= */
+const Music = (() => {
+  let ctx = null, master = null, bus = null, on = true, started = false, source = 'synth';
+  let droneT = null, melT = null, pos = 1, ducked = false;
+  const aud = $('aud'); let playlist = [], track = 0;
+  const SA = 130.81;                                    // Sa = C3
+  const SC = [5/6, 1, 9/8, 5/4, 3/2, 5/3, 2, 9/4, 5/2]; // Bhupali: Dha(low) Sa Re Ga Pa Dha Sa' Re' Ga'
+  const vol = () => +$('vol').value / 100;
+
+  function setup(){
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = vol() * .9; master.connect(ctx.destination);
+    const len = Math.floor(ctx.sampleRate * 3.5), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++){ const d = ir.getChannelData(c);
+      for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/len, 2.5); }
+    const conv = ctx.createConvolver(); conv.buffer = ir;
+    const wet = ctx.createGain(); wet.gain.value = .45;
+    const dry = ctx.createGain(); dry.gain.value = .8;
+    bus = ctx.createGain();
+    bus.connect(dry); dry.connect(master); bus.connect(conv); conv.connect(wet); wet.connect(master);
+  }
+
+  function pluck(f, t, lv = .07){               // one tanpura string
+    const g = ctx.createGain(), lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.Q.value = 3;
+    lp.frequency.setValueAtTime(f*14, t); lp.frequency.exponentialRampToValueAtTime(f*3, t+3);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(lv, t+.04);
+    g.gain.exponentialRampToValueAtTime(.0001, t+5.5);
+    [0, 5, -5].forEach(dt => { const o = ctx.createOscillator(); o.type = 'sawtooth';
+      o.frequency.value = f; o.detune.value = dt; o.connect(lp); o.start(t); o.stop(t+5.6); });
+    lp.connect(g); g.connect(bus);
+  }
+  function drone(){
+    if (!on || source !== 'synth') return;
+    const t = ctx.currentTime + .1;
+    [SA*.75, SA, SA, SA*.5].forEach((f,i) => pluck(f, t + i*1.3, i===3 ? .09 : .065));
+    droneT = setTimeout(drone, 5200);
+  }
+
+  function flute(f, t, d, lv, from){            // soft bansuri note with glide & vibrato
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), g2 = ctx.createGain();
+    const lfo = ctx.createOscillator(), lg = ctx.createGain();
+    o.type = 'sine'; o2.type = 'triangle';
+    if (from){ o.frequency.setValueAtTime(from, t); o.frequency.exponentialRampToValueAtTime(f, t+.18);
+               o2.frequency.setValueAtTime(from*2, t); o2.frequency.exponentialRampToValueAtTime(f*2, t+.18); }
+    else { o.frequency.value = f; o2.frequency.value = f*2; }
+    lfo.frequency.value = 5; lg.gain.value = 0; lg.gain.setValueAtTime(0, t);
+    lg.gain.linearRampToValueAtTime(f*.007, t + Math.min(d, .9));
+    lfo.connect(lg); lg.connect(o.frequency);
+    g2.gain.value = .12; o2.connect(g2); g2.connect(g); o.connect(g);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(lv, t+.12);
+    g.gain.setValueAtTime(lv, t + d*.75); g.gain.exponentialRampToValueAtTime(.0001, t + d + .45);
+    g.connect(bus);
+    [o, o2, lfo].forEach(x => { x.start(t); x.stop(t + d + .5); });
+  }
+  function phrase(){
+    if (!on || source !== 'synth') return;
+    let t = ctx.currentTime + .2, prev = null;
+    const n = 4 + Math.floor(Math.random()*4);
+    for (let i = 0; i < n; i++){
+      pos += [-2,-1,-1,1,1,2][Math.floor(Math.random()*6)];
+      pos = Math.max(0, Math.min(SC.length-1, pos));
+      if (i === n-1) pos = [1,4,6].reduce((a,b) => Math.abs(b-pos) < Math.abs(a-pos) ? b : a);
+      const d = [.55,.8,1.1,1.6][Math.floor(Math.random()*4)] * (i === n-1 ? 2.4 : 1);
+      const f = SA * 4 * SC[pos];
+      flute(f, t, d, .05, prev); prev = f; t += d;
+    }
+    melT = setTimeout(phrase, (t - ctx.currentTime + 2 + Math.random()*3) * 1000);
+  }
+
+  function bell(){                              // temple bell on every slide change
+    if (!on || !started || source !== 'synth' || !ctx) return;
+    const t = ctx.currentTime + .02;
+    [[1,.08,4],[2.01,.045,2.6],[2.76,.035,2],[5.4,.018,1.2],[8.9,.01,.8]].forEach(([r,l,d]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 620 * r;
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(l, t+.005);
+      g.gain.exponentialRampToValueAtTime(.0001, t+d);
+      o.connect(g); g.connect(bus); o.start(t); o.stop(t+d+.1);
+    });
+  }
+
+  function clearTimers(){ clearTimeout(droneT); clearTimeout(melT); }
+  function play(){
+    started = true;
+    if (source === 'file'){ if (ctx) ctx.suspend(); aud.volume = level(); aud.play().catch(()=>{}); }
+    else { setup(); ctx.resume(); master.gain.value = level()*.9; clearTimers(); drone(); phrase(); }
+    ui();
+  }
+  function pause(){ clearTimers(); aud.pause(); if (ctx) ctx.suspend(); ui(); }
+  function level(){ return vol() * (ducked ? .3 : 1); }
+  function ui(){ $('bMusic').classList.toggle('on', on); $('bMusic').textContent = on ? '🎵 Music' : '🔇 Music'; }
+
+  aud.onended = () => {
+    if (!playlist.length) return;
+    track = (track + 1) % playlist.length; aud.src = playlist[track]; if (on) aud.play().catch(()=>{});
+  };
+
+  return {
+    begin(){ if (!started && on) play(); },
+    toggle(){ on = !on; on ? play() : pause(); toast(on ? 'Music on' : 'Music off'); },
+    bell,
+    volume(){ aud.volume = level(); if (master) master.gain.value = level()*.9; },
+    duck(v){ ducked = v; this.volume(); },
+    useFiles(files){
+      if (!files.length) return;
+      playlist.forEach(u => URL.revokeObjectURL(u));
+      playlist = files.map(f => URL.createObjectURL(f)); track = 0;
+      aud.src = playlist[0]; aud.loop = playlist.length === 1;
+      source = 'file'; clearTimers(); on = true; play();
+      toast(`Playing your music: ${files.length} track(s)`);
+    }
+  };
+})();
+$('bMusic').onclick = () => Music.toggle();
+$('vol').oninput = () => Music.volume();
+$('music').onchange = e => Music.useFiles([...e.target.files]);
+
+function fill(el, d){
+  el.style.background = `radial-gradient(ellipse at 50% 38%, ${d.c1} 0%, ${d.c2} 55%, #000 100%)`;
+  let visual;
+  if (d.img) visual = `<div class="visual pic"><div class="photo"><img src="${d.img}" alt="${d.name}" referrerpolicy="no-referrer"></div></div>`;
+  else            visual = `<div class="visual">${artSVG(d)}</div>`;
+  const long = d.mantra && d.mantra.length > 40 ? ' long' : '';
+  el.innerHTML = `${visual}
+    <div class="text">
+      <div class="name">${d.name}${d.hi?`<span class="hi">${d.hi}</span>`:''}</div>
+      ${d.mantra?`<div class="mantra${long}">${d.mantra}</div>`:''}
+      ${d.tr?`<div class="tr">${d.tr}</div>`:''}
+    </div>`;
+  const im = el.querySelector('.photo img');
+  if (im) im.onerror = () => { d.img = null; el.querySelector('.visual').outerHTML = `<div class="visual">${artSVG(d)}</div>`; };
+}
+
+function show(i, dir){
+  idx = (i + slides.length) % slides.length;
+  const d = slides[idx];
+  spare.style.transition = 'none';
+  spare.className = 'slide ' + (dir < 0 ? 'from-left' : 'from-right');
+  fill(spare, d);
+  void spare.offsetWidth;
+  spare.style.transition = '';
+  spare.className = 'slide active';
+  cur.className = 'slide ' + (dir < 0 ? 'to-right' : 'to-left');
+  [cur, spare] = [spare, cur];
+  setTimeout(()=>{ if (!spare.classList.contains('active')) spare.innerHTML=''; }, 1600);
+  renderDots(); Music.bell(); speak(d); schedule();
+}
+
+function autoDir(){
+  const fx = $('sFx').value;
+  if (fx === 'ltr') return -1;
+  if (fx === 'swing') { swingDir = -swingDir; return swingDir; }
+  return 1;                      // default: rotate Right → Left
+}
+function next(){ show(idx + 1, autoDir()); }
+function prev(){ show(idx - 1, $('sFx').value === 'ltr' ? 1 : -1); }
+
+function schedule(){
+  clearTimeout(timer);
+  const p = $('progress');
+  p.style.transition = 'none'; p.style.width = '0';
+  if (!playing) return;
+  const ms = +$('sTime').value * 1000;
+  void p.offsetWidth;
+  p.style.transition = `width ${ms}ms linear`; p.style.width = '100%';
+  timer = setTimeout(next, ms);   // after the last slide it wraps to the first automatically
+}
+
+function renderDots(){
+  $('dots').innerHTML = slides.map((s,i)=>`<i class="${i===idx?'on':''}"></i>`).join('');
+}
+
+function speak(d){
+  if (!chant || !('speechSynthesis' in window) || !d.mantra) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(d.mantra);
+  u.lang = 'hi-IN'; u.rate = .7; u.pitch = .9;
+  const v = speechSynthesis.getVoices().find(v=>/hi[-_]IN/i.test(v.lang));
+  if (v) u.voice = v;
+  u.onstart = () => Music.duck(true);            // lower the music while the mantra is spoken
+  u.onend = u.onerror = () => Music.duck(false);
+  speechSynthesis.speak(u);
+}
+
+/* ---------- Load a picture for every deity ----------
+   Order: 1) images/<name>.jpg next to this file (works offline)
+          2) the main picture of the deity's Wikipedia article (most reliable)
+          3) known public-domain pictures on Wikimedia Commons
+          4) automatic image search on Wikimedia Commons
+          5) drawn gold artwork (only if everything fails)          */
+const WIKI_TITLES = {
+ shiva:['Shiva'], hanuman:['Hanuman'], lakshmi:['Lakshmi'], narasimha:['Narasimha'],
+ durga:['Durga'], kali:['Kali'], saraswati:['Saraswati'], ganesh:['Ganesha'],
+ kartik:['Kartikeya'], surya:['Surya'], rahu:['Rahu'], ketu:['Ketu'], krishna:['Krishna'],
+ vishnu:['Vishnu'], rama:['Rama'], jagannath:['Jagannath'], shani:['Shani'],
+ chandra:['Chandra'], gayatri:['Gayatri', 'Gayatri Mantra']
+};
+const EXT = ['jpg','jpeg','png','webp'];
+const isWeb = u => /^https?:/i.test(u);
+function probe(src, ms=12000){
+  return new Promise(res=>{
+    const i = new Image(); let done = false;
+    const end = v => { if (!done){ done = true; res(v); } };
+    const t = setTimeout(()=>{ i.src=''; end(null); }, ms);
+    i.onload  = () => { clearTimeout(t); end(i.naturalWidth ? src : null); };
+    i.onerror = () => { clearTimeout(t); end(null); };
+    if (isWeb(src)) i.crossOrigin = 'anonymous';   // lets "Save single file" pack it later
+    i.src = src;
+  });
+}
+async function getJSON(u, ms=12000){
+  const ac = new AbortController(); const t = setTimeout(()=>ac.abort(), ms);
+  try{ const r = await fetch(u, {signal:ac.signal}); return r.ok ? await r.json() : null; }
+  catch(e){ return null; } finally { clearTimeout(t); }
+}
+const commons = f => 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(f) + '?width=1200';
+
+/* Main picture of a Wikipedia article (REST API, then classic API) */
+async function wikiLeadImage(title){
+  const j = await getJSON('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title));
+  const cands = [];
+  if (j){
+    if (j.thumbnail && j.thumbnail.source) cands.push(j.thumbnail.source.replace(/\/\d+px-/, '/1000px-'), j.thumbnail.source);
+    if (j.originalimage && j.originalimage.source) cands.push(j.originalimage.source);
+  }
+  if (!cands.length){
+    const k = await getJSON('https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1' +
+      '&prop=pageimages&piprop=thumbnail&pithumbsize=1000&titles=' + encodeURIComponent(title));
+    const pg = k && k.query && Object.values(k.query.pages || {})[0];
+    if (pg && pg.thumbnail) cands.push(pg.thumbnail.source);
+  }
+  for (const u of cands){ const s = await probe(u); if (s) return s; }
+  return null;
+}
+
+async function commonsSearch(q){
+  const j = await getJSON('https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*' +
+    '&generator=search&gsrnamespace=6&gsrlimit=10&gsrsearch=' + encodeURIComponent(q + ' filetype:bitmap') +
+    '&prop=imageinfo&iiprop=url|mime&iiurlwidth=1000');
+  const pages = Object.values((j && j.query && j.query.pages) || {}).sort((a,b)=>(a.index||0)-(b.index||0));
+  const urls = [];
+  for (const p of pages){
+    const ii = p.imageinfo && p.imageinfo[0];
+    if (ii && /jpeg|png|webp/.test(ii.mime||'')) urls.push(ii.thumburl || ii.url);
+  }
+  return urls;
+}
+
+async function findLocal(d){
+  if (!/^(file|https?):/i.test(location.protocol)) return null;
+  for (const k of d.key.slice(0,2)) for (const e of EXT){
+    const s = await probe(`images/${k}.${e}`, 2500);
+    if (s) return s;
+  }
+  return null;
+}
+async function findOnline(d){
+  for (const t of (WIKI_TITLES[d.key[0]] || [d.name.replace(/^(Lord|Maa|Jai)\s+/,'')])){
+    const s = await wikiLeadImage(t); if (s) return s;
+  }
+  for (const f of (WEB_IMAGES[d.key[0]] || [])){
+    const s = await probe(commons(f)); if (s) return s;
+  }
+  for (const u of (await commonsSearch(IMAGE_SEARCH[d.key[0]] || d.name)).slice(0, 4)){
+    const s = await probe(u); if (s) return s;
+  }
+  return null;
+}
+function applyImg(d, src){
+  if (!src || d.img) return;
+  d.img = src;
+  if (slides[idx] === d) fill(cur, d);        // update the slide on screen right away
+}
+function banner(msg){
+  let b = document.getElementById('banner');
+  if (!b){
+    b = document.createElement('div'); b.id = 'banner';
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:50;background:#7a1010;color:#fff;' +
+      'font-size:15px;line-height:1.45;padding:12px 44px 12px 16px;text-align:center;box-shadow:0 2px 12px #000';
+    const x = document.createElement('button'); x.textContent = '✕';
+    x.style.cssText = 'position:absolute;right:10px;top:8px;background:none;border:0;color:#fff;font-size:20px;cursor:pointer';
+    x.onclick = () => b.remove();
+    document.body.appendChild(b); b.appendChild(document.createElement('span')); b.appendChild(x);
+  }
+  b.firstChild.innerHTML = msg;
+}
+async function loadAllImages(){
+  const packed = slides.filter(d => d.img && d.img.startsWith('data:')).length;
+  const list = slides.filter(d => d.key && !d.img);
+  if (!list.length){ toast(`All ${packed} pictures are packed inside this file — works offline`); return; }
+  toast('🙏 Loading deity pictures from the internet…');
+  const local = await Promise.all(list.map(findLocal));
+  list.forEach((d,i)=>applyImg(d, local[i]));
+  const nLocal = local.filter(Boolean).length;
+  const need = list.filter(d => !d.img);
+  if (!need.length){ toast(`All ${nLocal} deity pictures loaded from the images folder`); return; }
+  // current slide first, then the rest (4 at a time)
+  need.sort((a,b)=> (b===slides[idx]) - (a===slides[idx]));
+  let nOnline = 0, q = need.slice();
+  async function worker(){ while (q.length){ const d = q.shift(); const s = await findOnline(d); if (s){ applyImg(d, s); nOnline++; } } }
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  const missing = need.length - nOnline;
+  if (nOnline === 0 && nLocal === 0 && !packed){
+    banner('⚠ The deity pictures could not be downloaded. ' +
+      '<b>Please save this file to your laptop and open it by double-clicking (Chrome or Edge) with internet ON.</b> ' +
+      'Previews inside apps, email or WhatsApp block internet pictures. ' +
+      'Or click <b>🖼 My Photos</b> and choose your own pictures (e.g. shiva.jpg, hanuman.jpg).');
+    return;
+  }
+  toast(`Pictures: ${packed ? packed+' packed in file, ' : ''}${nLocal ? nLocal+' from images folder, ' : ''}${nOnline} from internet` +
+        (missing ? `, ${missing} using drawn art` : ' ✓') + '. Tip: click 💾 Save single file to keep them for offline use.');
+}
+
+/* ---------- PROJECTOR: show slides full screen on the projector ----------
+   Works with Windows+P "Duplicate" (same picture on laptop and wall) and with
+   "Extend" (Chrome/Edge will ask once for permission to use the second screen). */
+async function toProjector(){
+  try{
+    if (document.fullscreenElement) await document.exitFullscreen();
+    if ('getScreenDetails' in window){
+      const sd = await window.getScreenDetails();
+      const ext = sd.screens.find(sc => !sc.isPrimary) || sd.screens.find(sc => !sc.isInternal);
+      if (ext && sd.screens.length > 1){
+        await document.documentElement.requestFullscreen({screen: ext});
+        Music.begin();
+        toast('📽 Showing on the projector: ' + (ext.label || 'second screen'));
+        return;
+      }
+    }
+  }catch(e){ /* permission refused or not supported — fall back below */ }
+  try{ await document.documentElement.requestFullscreen(); }catch(e){}
+  Music.begin();
+  toast('📽 Full screen. If the wall is still empty: press Windows + P and choose "Duplicate".');
+}
+$('bProj').onclick = toProjector;
+
+/* ---------- 📷 WALL CAMERA: live view of the front wall with the god's picture on it ----------
+   Uses the BACK camera (facing away from you). Your own face is never shown on purpose:
+   if only a front/selfie camera exists (most laptops), it asks before using it. */
+let camStream = null;
+const camVideo = $('camVideo');
+function isFrontCam(track){
+  const st = track.getSettings ? track.getSettings() : {};
+  if (st.facingMode) return st.facingMode === 'user';
+  return /front|user|facetime|integrated|webcam|hd camera|hd webcam/i.test(track.label || '');
+}
+async function openBackCamera(){
+  const md = navigator.mediaDevices;
+  if (!md || !md.getUserMedia) throw new Error('nosupport');
+  const size = { width:{ideal:1920}, height:{ideal:1080} };
+  // 1) ask directly for the back camera
+  try{ return await md.getUserMedia({audio:false, video:{...size, facingMode:{exact:'environment'}}}); }catch(e){
+    if (e.name === 'NotAllowedError') throw e;
+  }
+  // 2) look for a camera named back / rear
+  let s = await md.getUserMedia({audio:false, video:{...size, facingMode:'environment'}});
+  if (!isFrontCam(s.getVideoTracks()[0])) return s;
+  const cams = (await md.enumerateDevices()).filter(d => d.kind === 'videoinput');
+  const back = cams.find(c => /back|rear|environment|world/i.test(c.label));
+  if (back){
+    s.getTracks().forEach(t => t.stop());
+    return await md.getUserMedia({audio:false, video:{...size, deviceId:{exact:back.deviceId}}});
+  }
+  // 3) only a front camera exists
+  s.getTracks().forEach(t => t.stop());
+  const ext = cams.find(c => !/front|user|facetime|integrated/i.test(c.label));
+  if (ext && cams.length > 1)
+    return await md.getUserMedia({audio:false, video:{...size, deviceId:{exact:ext.deviceId}}});
+  throw new Error('frontonly');
+}
+async function camOn(){
+  try{
+    camStream = await openBackCamera();
+  }catch(e){
+    const why =
+      e.message === 'frontonly' ? 'This device has only a front (selfie) camera, so it would show you. Please open this page on a mobile phone and use its back camera, or connect a USB camera pointed at the wall.' :
+      e.message === 'nosupport' ? 'Camera is not available here. Open this page in Chrome on a phone. If it still does not work, upload the file to app.netlify.com/drop and open the https link on the phone.' :
+      e.name === 'NotAllowedError' ? 'Camera permission was denied. Tap the lock/camera icon in the address bar and choose Allow.' :
+      e.name === 'NotReadableError' ? 'The camera is being used by another app. Close it and try again.' :
+      'Camera could not start: ' + (e.message || e.name);
+    banner('📷 ' + why);
+    return;
+  }
+  camVideo.srcObject = camStream;
+  camVideo.play().catch(()=>{});
+  document.body.classList.add('ar');
+  $('bCam').classList.add('on');
+  Music.begin();
+  toast('📷 Point the camera at the front wall. Use ⚙ Wall to set the size and position of the picture.');
+}
+function camOff(){
+  if (camStream){ camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  camVideo.srcObject = null;
+  document.body.classList.remove('ar');
+  $('bCam').classList.remove('on');
+}
+function toggleCam(){ camStream ? (camOff(), toast('Wall camera off')) : camOn(); }
+$('bCam').onclick = toggleCam;
+
+/* ---------- 📺 TV (cast without cables) ---------- */
+function toggleTV(){ $('tvHelp').classList.toggle('open'); }
+$('bTV').onclick = toggleTV;
+$('tvClose').onclick = toggleTV;
+$('tvGo').onclick = async () => {
+  $('tvHelp').classList.remove('open');
+  try{ await document.documentElement.requestFullscreen(); }catch(e){}
+  try{ await screen.orientation.lock('landscape'); }catch(e){}
+  Music.begin();
+};
+
+/* ---------- WALL fit: size, keystone, position, brightness, mirror, ceiling flip ---------- */
+const WALL_DEF = {layout:'big', zoom:100, key:0, y:0, bri:110, mirror:false, flip:false};
+let wall = {...WALL_DEF};
+try{ Object.assign(wall, JSON.parse(localStorage.getItem('dd-wall') || '{}')); }catch(e){}
+function applyWall(){
+  const st = $('stage');
+  const sx = (wall.mirror ? -1 : 1), rot = wall.flip ? 180 : 0;
+  st.style.transform = `translateY(${wall.y}vh) rotate(${rot}deg) scale(${sx * wall.zoom/100}, ${wall.zoom/100}) ` +
+                       `perspective(1200px) rotateX(${wall.key}deg)`;
+  st.style.filter = `brightness(${wall.bri/100}) saturate(${wall.bri > 100 ? 1.1 : 1})`;
+  document.body.classList.toggle('wall-big', wall.layout === 'big');
+  document.body.classList.toggle('wall-picture', wall.layout === 'picture');
+  $('wLayout').value = wall.layout;
+  $('wZoom').value = wall.zoom; $('wZoomV').textContent = wall.zoom + '%';
+  $('wKey').value = wall.key;   $('wKeyV').textContent = wall.key;
+  $('wY').value = wall.y;       $('wYV').textContent = wall.y;
+  $('wBri').value = wall.bri;   $('wBriV').textContent = wall.bri + '%';
+  $('wMirror').classList.toggle('on', wall.mirror); $('bMirror').classList.toggle('on', wall.mirror);
+  $('wFlip').classList.toggle('on', wall.flip);
+  try{ localStorage.setItem('dd-wall', JSON.stringify(wall)); }catch(e){}
+}
+$('wLayout').onchange = e => { wall.layout = e.target.value; applyWall(); };
+$('wZoom').oninput = e => { wall.zoom = +e.target.value; applyWall(); };
+$('wKey').oninput  = e => { wall.key  = +e.target.value; applyWall(); };
+$('wY').oninput    = e => { wall.y    = +e.target.value; applyWall(); };
+$('wBri').oninput  = e => { wall.bri  = +e.target.value; applyWall(); };
+$('wMirror').onclick = toggleMirror;
+$('wFlip').onclick = () => { wall.flip = !wall.flip; applyWall(); };
+$('wReset').onclick = () => { wall = {...WALL_DEF}; applyWall(); };
+function toggleMirror(){ wall.mirror = !wall.mirror; applyWall(); toast(wall.mirror ? 'Mirror on (rear projection)' : 'Mirror off'); }
+function toggleWallPanel(){ $('wallPanel').classList.toggle('open'); $('bWall').classList.toggle('on', $('wallPanel').classList.contains('open')); }
+$('bWall').onclick = toggleWallPanel;
+$('wClose').onclick = toggleWallPanel;
+applyWall();
+
+/* ---------- Keep screen awake while playing ---------- */
+let lock = null;
+async function wake(){ try{ if('wakeLock' in navigator && playing) lock = await navigator.wakeLock.request('screen'); }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') wake(); });
+
+/* ---------- Controls ---------- */
+$('bNext').onclick = next;
+$('bPrev').onclick = prev;
+$('bPlay').onclick = togglePlay;
+function togglePlay(){
+  playing = !playing;
+  $('bPlay').textContent = playing ? '⏸ Pause' : '▶ Play';
+  if (playing) wake(); schedule();
+}
+$('sTime').onchange = schedule;
+$('bChant').onclick = e => { chant = !chant; e.currentTarget.classList.toggle('on', chant);
+  if (chant) speak(slides[idx]); else { if ('speechSynthesis' in window) speechSynthesis.cancel(); Music.duck(false); } };
+$('bMirror').onclick = toggleMirror;
+$('bFull').onclick = toggleFull;
+function toggleFull(){
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(()=>{});
+  else document.exitFullscreen?.();
+}
+
+/* Your own photos picked by hand: name files like shiva.jpg, hanuman.png, durga.jpg …
+   Matching photos replace the online/drawn picture; any other photos are added as extra slides. */
+$('file').onchange = e => {
+  const files = [...e.target.files]; let matched = 0, added = 0;
+  files.forEach(f=>{
+    const url = URL.createObjectURL(f);
+    const n = f.name.toLowerCase().replace(/\.[^.]+$/,'').replace(/[^a-z]/g,'');
+    const d = slides.find(s => s.key && s.key.some(k => n.includes(k)));
+    if (d) { d.img = url; d.file = f; matched++; }
+    else {
+      const pretty = f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+      slides.push({name:pretty, img:url, file:f, c1:'#8e24aa', c2:'#14041e'}); added++;
+    }
+  });
+  toast(`${matched} photo(s) matched to deities, ${added} added as new slides`);
+  show(idx, 1);
+};
+
+/* Keyboard */
+document.addEventListener('keydown', e=>{
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') next();
+  else if (e.key === 'ArrowLeft') prev();
+  else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+  else if (e.key.toLowerCase() === 'f') toggleFull();
+  else if (e.key.toLowerCase() === 'm') toggleMirror();
+  else if (e.key.toLowerCase() === 'p') toProjector();
+  else if (e.key.toLowerCase() === 'w') toggleWallPanel();
+  else if (e.key.toLowerCase() === 'c') toggleCam();
+  else if (e.key.toLowerCase() === 't') toggleTV();
+  else if (e.key.toLowerCase() === 's') Music.toggle();
+  poke();
+});
+
+/* Swipe on mobile */
+let sx = null;
+stage.addEventListener('touchstart', e=>{ sx = e.touches[0].clientX; poke(); }, {passive:true});
+stage.addEventListener('touchend', e=>{
+  if (sx === null) return; const dx = e.changedTouches[0].clientX - sx;
+  if (Math.abs(dx) > 50) (dx < 0 ? next : prev)(); sx = null;
+});
+
+/* Hide controls & cursor when idle */
+let idleT;
+function poke(){ document.body.classList.remove('idle','hide-cursor'); clearTimeout(idleT);
+  idleT = setTimeout(()=>document.body.classList.add('idle','hide-cursor'), 3500); }
+['mousemove','click','touchstart'].forEach(ev=>document.addEventListener(ev, poke, {passive:true}));
+
+/* ---------- Save ONE html file with every picture packed inside ---------- */
+function toDataURL(src, max = 1400){
+  return new Promise((res, rej) => {
+    const im = new Image(); im.crossOrigin = 'anonymous';
+    im.onload = () => {
+      const k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      try { res(c.toDataURL('image/jpeg', 0.88)); } catch(e){ rej(e); }
+    };
+    im.onerror = rej; im.src = src;
+  });
+}
+$('bSave').onclick = async () => {
+  const out = {}; const extra = []; let n = 0;
+  toast('Packing pictures… please wait');
+  for (const d of slides){
+    if (!d.img) continue;
+    try{
+      const data = d.img.startsWith('data:') ? d.img : await toDataURL(d.img);
+      if (d.key) out[d.key[0]] = data; else extra.push({name:d.name, img:data});
+      n++;
+    }catch(e){}
+  }
+  if (!n){
+    toast('No pictures to pack yet. Wait for pictures to load, or click 🖼 My Photos first, then click 💾 again.');
+    return;
+  }
+  if (extra.length) out._extra = extra;
+
+  const doc = document.documentElement.cloneNode(true);
+  doc.querySelector('body').removeAttribute('class');
+  ['stage','dots','toast'].forEach(id => doc.querySelector('#'+id).innerHTML = '');
+  doc.querySelector('#progress').removeAttribute('style');
+  doc.querySelector('#wallPanel').classList.remove('open');
+  const bn = doc.querySelector('#banner'); if (bn) bn.remove();
+  doc.querySelector('#tvHelp').classList.remove('open');
+  doc.querySelector('#camVideo').removeAttribute('src');
+  doc.querySelector('#stage').removeAttribute('style');
+  doc.querySelector('#aud').removeAttribute('src');
+  doc.querySelectorAll('#controls .on').forEach(b => b.classList.remove('on'));
+  doc.querySelector('#bMusic').classList.add('on'); doc.querySelector('#bMusic').textContent = '🎵 Music';
+  doc.querySelector('#bPlay').textContent = '⏸ Pause';
+  const old = doc.querySelector('#emb'); if (old) old.remove();
+  const emb = document.createElement('script'); emb.id = 'emb';
+  emb.textContent = 'window.EMBEDDED_IMAGES=' + JSON.stringify(out).replace(/</g,'\\u003c') + ';';
+  const main = [...doc.querySelectorAll('body script')].find(x => x.id !== 'emb');
+  main.parentNode.insertBefore(emb, main);
+
+  const html = '<!DOCTYPE html>\n' + doc.outerHTML;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([html], {type:'text/html'}));
+  a.download = 'Divine-Darshan-AllInOne.html';
+  document.body.appendChild(a); a.click(); a.remove();
+  toast(`Saved Divine-Darshan-AllInOne.html with ${n} picture(s) inside (${(html.length/1048576).toFixed(1)} MB)`);
+};
+
+/* First click / key / touch: start music + go full screen
+   (browsers only allow sound after the viewer interacts with the page) */
+let firstGo = true;
+function goFullOnce(e){
+  if (!firstGo) return; firstGo = false;
+  Music.begin();
+  if (e && e.target && e.target.closest && e.target.closest('#controls')) return;
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(()=>{});
+}
+document.addEventListener('click', goFullOnce);
+document.addEventListener('keydown', goFullOnce);
+document.addEventListener('touchend', goFullOnce);
+
+/* Start */
+fill(cur, slides[0]); cur.className = 'slide active';
+renderDots(); schedule(); poke(); wake();
+toast('🙏 Click anywhere to start the music and full screen');
+setTimeout(loadAllImages, 600);
+</script>
+</body>
+</html>
